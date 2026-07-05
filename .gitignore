@@ -1,0 +1,4 @@
+RemindersOverlay
+*.o
+*.swiftmodule
+.DS_Store
