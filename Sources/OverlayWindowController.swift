@@ -139,6 +139,10 @@ final class OverlayWindowController: NSWindowController {
 
     private func applyFrame(animated: Bool) {
         guard let window = window, let screen = NSScreen.main else { return }
+        // Only draggable while minimized -- the full-size card is centered
+        // and covers the whole screen's click-blocker, so there's no
+        // reason to reposition it.
+        window.isMovableByWindowBackground = viewModel.minimized
         let size = viewModel.minimized ? Self.miniSize : Self.fullSize
         let target: NSRect
         if viewModel.minimized {
