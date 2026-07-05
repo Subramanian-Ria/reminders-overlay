@@ -63,14 +63,8 @@ an error.
 
 ## Running at login
 
-`start` will offer to do this for you. To do it manually instead:
-
-```sh
-cp com.remindersoverlay.app.plist ~/Library/LaunchAgents/
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.remindersoverlay.app.plist
-```
-
-To undo:
+`./start` offers to set this up for you (skipping the question if it's
+already enabled). To undo it later:
 
 ```sh
 launchctl bootout gui/$(id -u)/com.remindersoverlay.app
