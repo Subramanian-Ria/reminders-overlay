@@ -39,27 +39,14 @@ launches it, and asks whether you want it to launch automatically at login
 (skips that question if already enabled). Approve the Reminders access
 prompt when it appears.
 
-## Building and installing manually
+**Note on ad-hoc signing:** every rebuild produces a new ad-hoc signature,
+which macOS treats as a new app for permission purposes. That means each
+rebuild resets the Reminders permission grant and you'll need to approve
+the access prompt again. This is expected; it's not an error.
 
-If you just want to rebuild without going through the login-item prompt
-each time:
-
-```sh
-./build.sh
-```
-
-This compiles the app, assembles `/Applications/RemindersOverlay.app`, and
-ad-hoc code-signs it. Launch it with:
-
-```sh
-open /Applications/RemindersOverlay.app
-```
-
-**Note on ad-hoc signing:** every time you rerun `build.sh`, the app gets a
-new ad-hoc signature, which macOS treats as a new app for permission
-purposes. That means each rebuild resets the Reminders permission grant and
-you'll need to approve the access prompt again. This is expected; it's not
-an error.
+If you're actively editing the source, `./build.sh` alone (compile +
+install, no login-item prompt) is also available for a faster rebuild
+loop.
 
 ## Running at login
 
