@@ -66,15 +66,15 @@ an error.
 `start.sh` will offer to do this for you. To do it manually instead:
 
 ```sh
-cp com.riasubramanian.remindersoverlay.plist ~/Library/LaunchAgents/
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.riasubramanian.remindersoverlay.plist
+cp com.remindersoverlay.app.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.remindersoverlay.app.plist
 ```
 
 To undo:
 
 ```sh
-launchctl bootout gui/$(id -u)/com.riasubramanian.remindersoverlay
-rm ~/Library/LaunchAgents/com.riasubramanian.remindersoverlay.plist
+launchctl bootout gui/$(id -u)/com.remindersoverlay.app
+rm ~/Library/LaunchAgents/com.remindersoverlay.app.plist
 ```
 
 ## Menu bar controls

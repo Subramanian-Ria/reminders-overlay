@@ -10,7 +10,7 @@ echo "Launching RemindersOverlay..."
 open /Applications/RemindersOverlay.app
 echo "Approve the Reminders access prompt when it appears (every rebuild resets this -- see README)."
 
-LABEL="com.riasubramanian.remindersoverlay"
+LABEL="com.remindersoverlay.app"
 PLIST_NAME="$LABEL.plist"
 DEST="$HOME/Library/LaunchAgents/$PLIST_NAME"
 
