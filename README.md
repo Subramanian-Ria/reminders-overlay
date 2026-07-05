@@ -87,17 +87,17 @@ Click the checklist icon in the menu bar for:
 
 ## Project layout
 
-- `main.swift` -- app entry point.
-- `AppDelegate.swift` -- menu bar setup, time-of-day scheduling, sleep/wake
-  and live-change handling.
-- `ReminderScheduling.swift` -- shared "is this reminder eligible to show
-  right now" logic, used by both the scheduler and the overlay's own
-  active/later split.
-- `ReminderStore.swift` -- EventKit wrapper (fetch, complete, add).
-- `OverlayWindowController.swift` -- the overlay's `NSWindow` management,
-  including the separate invisible full-screen window used to block clicks
-  elsewhere on screen while not minimized.
-- `OverlayViewModel.swift` / `OverlayContentView.swift` -- SwiftUI view
-  model and UI.
+- `Sources/main.swift` -- app entry point.
+- `Sources/AppDelegate.swift` -- menu bar setup, time-of-day scheduling,
+  sleep/wake and live-change handling.
+- `Sources/ReminderScheduling.swift` -- shared "is this reminder eligible
+  to show right now" logic, used by both the scheduler and the overlay's
+  own active/later split.
+- `Sources/ReminderStore.swift` -- EventKit wrapper (fetch, complete, add).
+- `Sources/OverlayWindowController.swift` -- the overlay's `NSWindow`
+  management, including the separate invisible full-screen window used to
+  block clicks elsewhere on screen while not minimized.
+- `Sources/OverlayViewModel.swift` / `Sources/OverlayContentView.swift` --
+  SwiftUI view model and UI.
 - `Info.plist` -- app bundle metadata (bundle ID, `NSRemindersUsageDescription`,
   `LSUIElement`).

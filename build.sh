@@ -11,7 +11,8 @@ APP_NAME="RemindersOverlay"
 APP_PATH="/Applications/$APP_NAME.app"
 
 echo "Building..."
-swiftc -O main.swift AppDelegate.swift ReminderStore.swift ReminderScheduling.swift OverlayWindowController.swift OverlayViewModel.swift OverlayContentView.swift \
+swiftc -O Sources/main.swift Sources/AppDelegate.swift Sources/ReminderStore.swift Sources/ReminderScheduling.swift \
+    Sources/OverlayWindowController.swift Sources/OverlayViewModel.swift Sources/OverlayContentView.swift \
     -o "$APP_NAME" \
     -framework Cocoa -framework EventKit -framework SwiftUI
 
