@@ -2,6 +2,16 @@ import Cocoa
 import EventKit
 import SwiftUI
 
+// NSCursor.set() only takes effect while this app is the frontmost/active
+// application -- macOS silently ignores cursor changes requested by a
+// background app, so the pointing-hand cursor won't show while some other
+// app is active. An NSView cursor-rect-based approach was tried to work
+// around that, but NSViewRepresentable content placed outside a
+// ScrollView/LazyVStack never received mouseEntered/cursorUpdate callbacks
+// for reasons that resisted diagnosis, and fixing it for every element
+// added more complexity than the "cursor while unfocused" polish is worth.
+// Reverted to the simple, reliable version: works while focused, silently
+// does nothing while some other app is active.
 private func setCursor(_ hovering: Bool, _ cursor: NSCursor = .pointingHand) {
     if hovering {
         cursor.set()
@@ -61,7 +71,11 @@ struct OverlayContentView: View {
                         ReminderRow(
                             reminder: reminder,
                             tintColor: colorForReminder(reminder),
-                            isRecentlyAdded: reminder.calendarItemIdentifier == viewModel.recentlyAddedID
+                            isRecentlyAdded: reminder.calendarItemIdentifier == viewModel.recentlyAddedID,
+                            onOpen: {
+                                openInReminders(reminder)
+                                viewModel.minimize()
+                            }
                         ) {
                             viewModel.complete(reminder)
                         }
@@ -79,6 +93,10 @@ struct OverlayContentView: View {
                             colorFor: colorForReminder,
                             recentlyAddedID: viewModel.recentlyAddedID,
                             expanded: $viewModel.laterExpanded,
+                            onOpen: { reminder in
+                                openInReminders(reminder)
+                                viewModel.minimize()
+                            },
                             onComplete: { viewModel.complete($0) }
                         )
                     }
@@ -87,18 +105,22 @@ struct OverlayContentView: View {
                 .padding(.bottom, 12)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(
-            ZStack {
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                ChasingLightBorder(cornerRadius: 14)
-            }
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.white.opacity(0.15), lineWidth: 2)
         )
         .shadow(color: .black.opacity(0.35), radius: 24)
+        // Fixed margin (not tied to minimized/full state) so the shadow's
+        // blur has room to render without being hard-clipped by the
+        // window's own bounds -- that hard clip is what produced small
+        // triangular remnants of the shadow poking out near the corners.
+        .padding(Self.shadowMargin)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
+    static let shadowMargin: CGFloat = 32
 
     private var header: some View {
         HStack {
@@ -120,33 +142,6 @@ struct OverlayContentView: View {
             }
         }
         .padding(16)
-    }
-}
-
-// A bright highlight that continuously travels around the card's border,
-// so an incomplete morning reminders list reads as something that needs
-// attention rather than blending into the background.
-private struct ChasingLightBorder: View {
-    let cornerRadius: CGFloat
-    @State private var angle: Double = 0
-
-    private let colors: [Color] = [
-        .clear, .clear, .clear, .clear, .clear,
-        .orange.opacity(0.9), .yellow, .orange.opacity(0.9),
-        .clear, .clear, .clear, .clear, .clear,
-    ]
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: cornerRadius)
-            .stroke(
-                AngularGradient(gradient: Gradient(colors: colors), center: .center, angle: .degrees(angle)),
-                lineWidth: 2.5
-            )
-            .onAppear {
-                withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
-                    angle = 360
-                }
-            }
     }
 }
 
@@ -229,6 +224,7 @@ private struct LaterTodaySection: View {
     let colorFor: (EKReminder) -> Color
     let recentlyAddedID: String?
     @Binding var expanded: Bool
+    let onOpen: (EKReminder) -> Void
     let onComplete: (EKReminder) -> Void
 
     var body: some View {
@@ -267,7 +263,8 @@ private struct LaterTodaySection: View {
                     LaterReminderRow(
                         reminder: reminder,
                         tintColor: colorFor(reminder),
-                        isRecentlyAdded: reminder.calendarItemIdentifier == recentlyAddedID
+                        isRecentlyAdded: reminder.calendarItemIdentifier == recentlyAddedID,
+                        onOpen: { onOpen(reminder) }
                     ) {
                         onComplete(reminder)
                     }
@@ -282,6 +279,7 @@ private struct LaterReminderRow: View {
     let reminder: EKReminder
     let tintColor: Color
     let isRecentlyAdded: Bool
+    let onOpen: () -> Void
     let onComplete: () -> Void
     @State private var checked = false
 
@@ -319,7 +317,7 @@ private struct LaterReminderRow: View {
         .background(checked ? Color.blue.opacity(0.2) : (isRecentlyAdded ? tintColor.opacity(0.2) : Color.clear))
         .animation(.easeOut(duration: 0.35), value: isRecentlyAdded)
         .contentShape(Rectangle())
-        .onTapGesture { openInReminders(reminder) }
+        .onTapGesture { onOpen() }
     }
 }
 
@@ -327,6 +325,7 @@ private struct ReminderRow: View {
     let reminder: EKReminder
     let tintColor: Color
     let isRecentlyAdded: Bool
+    let onOpen: () -> Void
     let onComplete: () -> Void
     @State private var checked = false
     @State private var hovering = false
@@ -361,7 +360,7 @@ private struct ReminderRow: View {
                 Spacer()
             }
             .contentShape(Rectangle())
-            .onTapGesture { openInReminders(reminder) }
+            .onTapGesture { onOpen() }
             .onHover { setCursor($0) }
         }
         .padding(.horizontal, 16)

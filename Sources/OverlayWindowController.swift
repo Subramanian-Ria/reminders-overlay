@@ -41,8 +41,12 @@ final class OverlayWindowController: NSWindowController {
     // source of the earlier "expand"/non-smooth glitches.
     private var blockerWindow: NSWindow?
 
-    private static let fullSize = NSSize(width: 380, height: 560)
-    private static let miniSize = NSSize(width: 340, height: 420)
+    // Padded on each dimension by 2x OverlayContentView.shadowMargin, since
+    // the card's own shadow needs room around it that isn't hard-clipped by
+    // the window's exact bounds.
+    private static let shadowPadding = OverlayContentView.shadowMargin * 2
+    private static let fullSize = NSSize(width: 380 + shadowPadding, height: 560 + shadowPadding)
+    private static let miniSize = NSSize(width: 340 + shadowPadding, height: 420 + shadowPadding)
     private static let miniMargin: CGFloat = 16
     private let resizeDuration: TimeInterval = 0.25
 
@@ -100,8 +104,8 @@ final class OverlayWindowController: NSWindowController {
         viewModel.setReminders(reminders)
     }
 
-    func toggleMinimizeFromMenu() {
-        viewModel.toggleMinimize()
+    func minimizeForSpaceChange() {
+        viewModel.minimize()
     }
 
     private func completeReminder(_ reminder: EKReminder) {

@@ -72,6 +72,15 @@ final class OverlayViewModel: ObservableObject {
         onToggleMinimize?()
     }
 
+    // Idempotent, unlike toggleMinimize -- for triggers that should always
+    // result in minimized (opening a task in Reminders, switching Spaces),
+    // not flip an already-minimized overlay back to full.
+    func minimize() {
+        guard !minimized else { return }
+        minimized = true
+        onToggleMinimize?()
+    }
+
     func complete(_ reminder: EKReminder) {
         onComplete?(reminder)
     }

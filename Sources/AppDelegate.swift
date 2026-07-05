@@ -7,6 +7,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = ReminderStore()
     private var scheduledTimers: [Timer] = []
     private var eventStoreChangeWorkItem: DispatchWorkItem?
+    // Set by the "Open" menu action so the overlay stays visible (even with
+    // zero reminders) until the user dismisses it themselves, instead of an
+    // automatic check closing it again just because nothing's eligible yet.
+    private var keepOpenRegardless = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -15,6 +19,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self,
             selector: #selector(handleWake),
             name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
+        // The overlay's window is set to appear on every Space
+        // (.canJoinAllSpaces), including its full-screen click-blocker --
+        // without this, swiping to a different desktop to do unrelated work
+        // would still show the same full-screen blocking overlay there.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(handleSpaceChange),
+            name: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil
         )
         // Fires whenever Reminders' underlying data changes for any reason --
@@ -37,13 +51,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let menu = NSMenu()
 
+        let openItem = NSMenuItem(title: "Open", action: #selector(openOverlayNow), keyEquivalent: "o")
+        openItem.target = self
+        menu.addItem(openItem)
+
         let checkItem = NSMenuItem(title: "Check Reminders Now", action: #selector(checkRemindersNow), keyEquivalent: "r")
         checkItem.target = self
         menu.addItem(checkItem)
-
-        let toggleItem = NSMenuItem(title: "Toggle Minimize", action: #selector(toggleMinimize), keyEquivalent: "m")
-        toggleItem.target = self
-        menu.addItem(toggleItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -62,6 +76,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         performCheck(respectSchedule: true)
     }
 
+    @objc private func handleSpaceChange() {
+        overlayController?.minimizeForSpaceChange()
+    }
+
     // EventKit can post EKEventStoreChanged in quick bursts (e.g. during an
     // iCloud sync with several edits), so debounce down to a single check.
     @objc private func handleEventStoreChanged() {
@@ -77,8 +95,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         performCheck(respectSchedule: false)
     }
 
-    @objc private func toggleMinimize() {
-        overlayController?.toggleMinimizeFromMenu()
+    @objc private func openOverlayNow() {
+        keepOpenRegardless = true
+        store.requestAccess { [weak self] granted in
+            guard let self = self else { return }
+            guard granted else {
+                print("[RemindersOverlay] Reminders access not granted.")
+                return
+            }
+            self.store.fetchTodayIncomplete { all in
+                self.handle(all: all, shouldShow: true)
+                self.scheduleUpcomingTriggers(all: all)
+            }
+        }
     }
 
     @objc private func scheduledTimerFired() {
@@ -100,7 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let now = Date()
                 let eligibleNow = all.filter { ReminderScheduling.isEligibleNow($0, now: now) }
                 let shouldShow = respectSchedule ? !eligibleNow.isEmpty : !all.isEmpty
-                self.handle(all: all, shouldShow: shouldShow)
+                self.handle(all: all, shouldShow: shouldShow || self.keepOpenRegardless)
                 self.scheduleUpcomingTriggers(all: all)
             }
         }
@@ -118,6 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 onDismiss: { [weak self] in
                     self?.overlayController?.close()
                     self?.overlayController = nil
+                    self?.keepOpenRegardless = false
                     // Covers reminders quick-added (with a later due time) from
                     // within the overlay and then dismissed before that time --
                     // without this, the timer set built from the last automatic
