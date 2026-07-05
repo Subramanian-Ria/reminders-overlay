@@ -48,7 +48,12 @@ final class OverlayWindowController: NSWindowController {
     private static let fullSize = NSSize(width: 380 + shadowPadding, height: 560 + shadowPadding)
     private static let miniSize = NSSize(width: 340 + shadowPadding, height: 420 + shadowPadding)
     private static let miniMargin: CGFloat = 16
+    // Snap back to the default corner if released within this distance of
+    // it -- large and quick to settle, so it reads as "magnetic" rather
+    // than something you have to precisely aim for.
+    private static let snapDistance: CGFloat = 180
     private let resizeDuration: TimeInterval = 0.25
+    private var dragSettleWorkItem: DispatchWorkItem?
 
     init(store: ReminderStore, onDismiss: @escaping () -> Void, onRefresh: @escaping () -> Void) {
         self.store = store
@@ -93,11 +98,22 @@ final class OverlayWindowController: NSWindowController {
         hostingView.autoresizingMask = [.width, .height]
         hostingView.frame = window.contentLayoutRect
         window.contentView = hostingView
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidMove),
+            name: NSWindow.didMoveNotification,
+            object: window
+        )
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     func update(reminders: [EKReminder]) {
@@ -137,6 +153,14 @@ final class OverlayWindowController: NSWindowController {
         super.close()
     }
 
+    private func minimizedOrigin(on screen: NSScreen) -> NSPoint {
+        let visible = screen.visibleFrame
+        return NSPoint(
+            x: visible.maxX - Self.miniSize.width - Self.miniMargin,
+            y: visible.maxY - Self.miniSize.height - Self.miniMargin
+        )
+    }
+
     private func applyFrame(animated: Bool) {
         guard let window = window, let screen = NSScreen.main else { return }
         // Only draggable while minimized -- the full-size card is centered
@@ -146,13 +170,8 @@ final class OverlayWindowController: NSWindowController {
         let size = viewModel.minimized ? Self.miniSize : Self.fullSize
         let target: NSRect
         if viewModel.minimized {
-            let visible = screen.visibleFrame
-            target = NSRect(
-                x: visible.maxX - size.width - Self.miniMargin,
-                y: visible.maxY - size.height - Self.miniMargin,
-                width: size.width,
-                height: size.height
-            )
+            let origin = minimizedOrigin(on: screen)
+            target = NSRect(origin: origin, size: size)
         } else {
             let frame = screen.frame
             target = NSRect(
@@ -171,6 +190,34 @@ final class OverlayWindowController: NSWindowController {
             context.duration = self.resizeDuration
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             window.animator().setFrame(target, display: true)
+        }
+    }
+
+    // Fires continuously while the user drags the minimized panel (AppKit's
+    // isMovableByWindowBackground handles the drag itself; this just
+    // observes where it ends up). After motion pauses, as a proxy for
+    // "drag ended" since there's no dedicated end-of-drag notification for
+    // this kind of drag, snaps back to the default corner if released
+    // within range.
+    @objc private func windowDidMove() {
+        guard viewModel.minimized else { return }
+        dragSettleWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.snapToDefaultCornerIfClose()
+        }
+        dragSettleWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: workItem)
+    }
+
+    private func snapToDefaultCornerIfClose() {
+        guard viewModel.minimized, let window = window, let screen = NSScreen.main else { return }
+        let target = minimizedOrigin(on: screen)
+        let distance = hypot(window.frame.origin.x - target.x, window.frame.origin.y - target.y)
+        guard distance < Self.snapDistance, distance > 0 else { return }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            window.animator().setFrameOrigin(target)
         }
     }
 
