@@ -6,10 +6,13 @@ directly (no AppleScript/Automation permissions involved).
 
 ## Behavior
 
-- Reminders due at/before 9am, or with no specific time, are "morning"
-  reminders: always shown as soon as anything is checked, including at
-  launch.
-- Everything else pops up exactly at its own scheduled due time.
+- Every reminder with a specific due time pops up exactly at that time
+  (each gets its own scheduled timer). Reminders with no due time at all
+  have nothing to schedule against, so they default to always shown as
+  soon as anything is checked, including at launch.
+- The quick-add row's "9am"/"3pm" buttons are just convenient presets for
+  common check-in times -- reminders added that way behave like any other
+  timed reminder, nothing special.
 - A "Later Today" section (collapsed by default) previews anything due
   later today, including things quick-added from within the overlay.
 - Listens for live changes to Reminders (`EKEventStoreChanged`) and for
