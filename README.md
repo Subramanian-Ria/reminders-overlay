@@ -31,7 +31,7 @@ directly (no AppleScript/Automation permissions involved).
 ## Quick start
 
 ```sh
-./start.sh
+./start
 ```
 
 This builds the app, installs it to `/Applications/RemindersOverlay.app`,
@@ -63,7 +63,7 @@ an error.
 
 ## Running at login
 
-`start.sh` will offer to do this for you. To do it manually instead:
+`start` will offer to do this for you. To do it manually instead:
 
 ```sh
 cp com.remindersoverlay.app.plist ~/Library/LaunchAgents/
