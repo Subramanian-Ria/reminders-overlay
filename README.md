@@ -28,20 +28,32 @@ directly (no AppleScript/Automation permissions involved).
 - Xcode Command Line Tools (`xcode-select --install`) -- no full Xcode
   install needed, `swiftc` from the Command Line Tools is enough.
 
-## Building and installing
+## Quick start
+
+```sh
+./start.sh
+```
+
+This builds the app, installs it to `/Applications/RemindersOverlay.app`,
+launches it, and asks whether you want it to launch automatically at login
+(skips that question if already enabled). Approve the Reminders access
+prompt when it appears.
+
+## Building and installing manually
+
+If you just want to rebuild without going through the login-item prompt
+each time:
 
 ```sh
 ./build.sh
 ```
 
 This compiles the app, assembles `/Applications/RemindersOverlay.app`, and
-ad-hoc code-signs it. Launch it once with:
+ad-hoc code-signs it. Launch it with:
 
 ```sh
 open /Applications/RemindersOverlay.app
 ```
-
-The first launch will prompt for Reminders access -- approve it.
 
 **Note on ad-hoc signing:** every time you rerun `build.sh`, the app gets a
 new ad-hoc signature, which macOS treats as a new app for permission
@@ -51,8 +63,7 @@ an error.
 
 ## Running at login
 
-To have it launch automatically at login (in the background, no Dock icon,
-since it's an accessory/menu-bar-only app):
+`start.sh` will offer to do this for you. To do it manually instead:
 
 ```sh
 cp com.riasubramanian.remindersoverlay.plist ~/Library/LaunchAgents/
